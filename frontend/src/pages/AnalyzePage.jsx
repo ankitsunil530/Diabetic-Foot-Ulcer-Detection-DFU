@@ -61,8 +61,21 @@ export default function AnalyzePage() {
 
     try {
       const res = await predictImage(file)
-      const pred = res?.prediction || {}
-      const sev = getSeverity({ label: pred.label, confidence: pred.confidence })
+
+      // 🔥 IMPORTANT FIX (backend → frontend mapping)
+      const pred = {
+        label: res.prediction,
+        confidence: res.confidence,
+        stage: res.stage,
+        risk: res.risk_level,
+        advice: res.advice,
+      }
+
+      const sev = getSeverity({
+        label: pred.label,
+        confidence: pred.confidence,
+      })
+
       const enrichedPrediction = {
         ...pred,
         severity: sev.level,
@@ -72,13 +85,16 @@ export default function AnalyzePage() {
       const base = createHistoryItem({ file, prediction: enrichedPrediction })
       const item = await attachPreviewDataUrl(base, file)
       saveHistoryItem(item)
+
       toast.push({
         tone: 'success',
         title: 'Analysis complete',
         message: `Saved to history • ${item.label}`,
       })
+
       succeeded = true
       navigate(`/results/${item.id}`)
+
     } catch (e) {
       const message =
         e instanceof Error ? e.message : 'Prediction failed. Please try again.'
@@ -122,8 +138,6 @@ export default function AnalyzePage() {
               variant="secondary"
               onClick={onReset}
               disabled={!file && status.state !== 'error'}
-              title="Reset"
-              aria-label="Reset"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
@@ -131,12 +145,8 @@ export default function AnalyzePage() {
 
           {status.state === 'error' && (
             <Card className="p-4">
-              <div className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Error
-              </div>
-              <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                {status.message}
-              </div>
+              <div className="text-sm font-extrabold">Error</div>
+              <div className="mt-1 text-sm">{status.message}</div>
               <div className="mt-3">
                 <Button onClick={onAnalyze}>Retry</Button>
               </div>
@@ -145,8 +155,8 @@ export default function AnalyzePage() {
         </div>
 
         <Card className="p-5">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white">
-            <Image className="h-4 w-4 text-primary" aria-hidden="true" />
+          <div className="flex items-center gap-2 text-sm font-extrabold">
+            <Image className="h-4 w-4 text-primary" />
             Preview
           </div>
 
@@ -155,18 +165,15 @@ export default function AnalyzePage() {
               <div className="grid gap-3">
                 <Skeleton className="h-44 w-full" />
                 <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-4 w-1/2" />
               </div>
             ) : (
               <div className="grid gap-3">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-                  <img
-                    src={previewUrl}
-                    alt="Selected"
-                    className="max-h-[380px] w-full object-contain"
-                  />
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">
+                <img
+                  src={previewUrl}
+                  alt="Selected"
+                  className="max-h-[380px] w-full object-contain rounded-xl"
+                />
+                <div className="text-xs">
                   {file.name} • {(file.size / (1024 * 1024)).toFixed(2)} MB
                 </div>
               </div>
@@ -174,7 +181,7 @@ export default function AnalyzePage() {
           </div>
 
           {status.state === 'loading' && (
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+            <div className="mt-5">
               <Loader title="Analyzing image" steps={STEPS} activeStep={activeStep} />
             </div>
           )}

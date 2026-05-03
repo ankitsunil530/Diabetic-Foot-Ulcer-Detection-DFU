@@ -6,9 +6,10 @@ import numpy as np
 import io
 import traceback
 import os
+
 from utils import preprocess_image, get_stage, SpatialAttentionLayer
 
-# 🔥 Fix quantization_config issue
+# ------------------ Fix quantization_config issue ------------------
 from keras.layers import Dense
 
 original_init = Dense.__init__
@@ -19,26 +20,33 @@ def new_init(self, *args, **kwargs):
 
 Dense.__init__ = new_init
 
+
 # ------------------ Flask App ------------------
 app = Flask(__name__)
 CORS(app)
 
+
 # ------------------ Load Model ------------------
 MODEL_PATH = "final_model.keras"
 
-try:
-    model = tf.keras.models.load_model(
-        MODEL_PATH,
-        custom_objects={"SpatialAttentionLayer": SpatialAttentionLayer},
-        compile=False,
-        safe_mode=False
-    )
-    print("✅ Model Loaded Successfully")
+model = None
 
-except Exception as e:
-    print("❌ Model Loading Failed")
-    traceback.print_exc()
-    model = None
+def load_model():
+    global model
+    try:
+        model = tf.keras.models.load_model(
+            MODEL_PATH,
+            custom_objects={"SpatialAttentionLayer": SpatialAttentionLayer},
+            compile=False,
+            safe_mode=False
+        )
+        print("✅ Model Loaded Successfully")
+    except Exception:
+        print("❌ Model Loading Failed")
+        traceback.print_exc()
+
+load_model()
+
 
 # ------------------ Routes ------------------
 
@@ -50,50 +58,49 @@ def home():
     })
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/api/health")
+def health():
+    return jsonify({"ok": True})
+
+
+@app.route("/api/predict", methods=["POST"])
 def predict():
     try:
-        # 🔴 Model check
         if model is None:
-            return jsonify({"error": "Model not loaded"}), 500
+            return jsonify({"ok": False, "error": "Model not loaded"}), 500
 
-        # 🔴 File check
-        if "file" not in request.files:
-            return jsonify({"error": "No file uploaded"}), 400
+        if "image" not in request.files:
+            return jsonify({"ok": False, "error": "No file uploaded"}), 400
 
-        file = request.files["file"]
+        file = request.files["image"]
 
-        # 🔴 Empty file check
         if file.filename == "":
-            return jsonify({"error": "Empty file"}), 400
+            return jsonify({"ok": False, "error": "Empty file"}), 400
 
-        # ------------------ Read Image ------------------
+        # -------- Read Image --------
         img = Image.open(io.BytesIO(file.read())).convert("RGB")
 
-        # ------------------ Preprocess ------------------
+        # -------- Preprocess --------
         input_img = preprocess_image(img)
 
-        # ------------------ Prediction ------------------
+        # -------- Predict --------
         pred = model.predict(input_img)
         confidence = float(np.max(pred))
         stage = get_stage(pred)
 
-        # ------------------ Label Logic ------------------
-        if stage == "No Ulcer":
-            label = "Normal"
-        else:
-            label = "Ulcer"
+        label = "Normal" if stage == "No Ulcer" else "Ulcer"
 
-        # ------------------ Confidence Threshold ------------------
+        # -------- Confidence low case --------
         if confidence < 0.6:
             return jsonify({
-                "prediction": "Uncertain",
+                "ok": True,
+                "prediction": label,
+                "stage": stage,
                 "confidence": round(confidence, 4),
-                "stage": "Unknown",
-                "message": "Model is not confident. Please upload a clearer image."
+                "note": "Low confidence prediction"
             })
 
-        # ------------------ Risk Level ------------------
+        # -------- Risk logic --------
         risk = "High" if stage in ["Moderate", "Severe"] else "Low"
 
         advice = (
@@ -102,8 +109,8 @@ def predict():
             else "Monitor regularly"
         )
 
-        # ------------------ Response ------------------
         return jsonify({
+            "ok": True,
             "prediction": label,
             "stage": stage,
             "confidence": round(confidence, 4),
@@ -113,10 +120,10 @@ def predict():
 
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ------------------ Run ------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 7860))   # 🔥 HF default port
     app.run(host="0.0.0.0", port=port)
