@@ -1,4 +1,13 @@
-import { ArrowRight, Brain, Gauge, ShieldCheck } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  Brain,
+  ClipboardCheck,
+  Eye,
+  Gauge,
+  ShieldCheck,
+  Upload,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
@@ -14,6 +23,31 @@ function FeatureCard({ icon, title, desc }) {
         <div className="min-w-0">
           <div className="text-sm font-extrabold">{title}</div>
           <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            {desc}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function WorkflowStep({ icon, step, title, desc }) {
+  return (
+    <Card className="p-5">
+      <div className="flex h-full flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-primary dark:bg-blue-950/40">
+            {icon}
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {step}
+          </span>
+        </div>
+        <div>
+          <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+            {title}
+          </div>
+          <div className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             {desc}
           </div>
         </div>
@@ -92,6 +126,56 @@ export default function HomePage() {
               </div>
             </div>
           </Card>
+        </div>
+      </section>
+
+      <section className="grid gap-4">
+        <div className="grid gap-1">
+          <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+            How It Works
+          </div>
+          <p className="max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            The screening flow turns a foot image into a clear prediction summary
+            through four simple stages.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <WorkflowStep
+            icon={<Upload className="h-5 w-5" aria-hidden="true" />}
+            step="Step 1"
+            title="Upload Image"
+            desc="The user uploads a clear foot image for the system to review."
+          />
+          <WorkflowStep
+            icon={<Brain className="h-5 w-5" aria-hidden="true" />}
+            step="Step 2"
+            title="AI Analysis"
+            desc="The model processes the image and extracts relevant visual features."
+          />
+          <WorkflowStep
+            icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
+            step="Step 3"
+            title="Prediction Generation"
+            desc="The system estimates whether signs of a diabetic foot ulcer are present."
+          />
+          <WorkflowStep
+            icon={<Eye className="h-5 w-5" aria-hidden="true" />}
+            step="Step 4"
+            title="View Results"
+            desc="The prediction, confidence, severity cues, and guidance are displayed."
+          />
+        </div>
+
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+          <AlertTriangle
+            className="mt-0.5 h-5 w-5 flex-none"
+            aria-hidden="true"
+          />
+          <p className="leading-relaxed">
+            This tool is intended for screening and assistance only. It is not a
+            substitute for professional medical advice, diagnosis, or treatment.
+          </p>
         </div>
       </section>
 
