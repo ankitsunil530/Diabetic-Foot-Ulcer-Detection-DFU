@@ -122,8 +122,8 @@ value: <image file>
 ### 🔧 Backend (Flask)
 
 ```bash
-git clone https://github.com/your-username/dfu-project.git
-cd dfu-project/backend
+git clone https://github.com/ankitsunil530/Diabetic-Foot-Ulcer-Detection-DFU.git
+cd Diabetic-Foot-Ulcer-Detection-DFU/backend
 
 pip install -r requirements.txt
 python app.py
