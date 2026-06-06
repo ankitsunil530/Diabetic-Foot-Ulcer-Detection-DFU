@@ -6,6 +6,7 @@ import {
   HelpCircle,
   History,
   Image as ImageIcon,
+  ImageOff,
   ThermometerSun,
   ZoomIn,
 } from 'lucide-react'
@@ -27,6 +28,31 @@ function SeverityPill({ severity }) {
     <Badge tone={tone}>
       <Flame className="h-3.5 w-3.5" /> {severity}
     </Badge>
+  )
+}
+
+/**
+ * Renders the stored preview, degrading gracefully: shows an "image
+ * unavailable" placeholder when there is no preview data URL, and also when a
+ * present data URL fails to decode (onError). Prevents the broken-image icon
+ * that previously appeared on the results page when previewDataUrl was missing.
+ */
+function PreviewImage({ src, className }) {
+  const [errored, setErrored] = useState(false)
+
+  if (!src || errored) {
+    return (
+      <div className="grid h-64 w-full place-items-center bg-slate-100 dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-2 text-slate-400">
+          <ImageOff className="h-8 w-8" aria-hidden="true" />
+          <span className="text-xs font-semibold">Image unavailable</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <img src={src} alt="" className={className} onError={() => setErrored(true)} />
   )
 }
 
@@ -114,9 +140,8 @@ export default function ResultPage() {
 
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
             <div className="relative">
-              <img
-                src={item.previewDataUrl || ''}
-                alt=""
+              <PreviewImage
+                src={item.previewDataUrl}
                 className="max-h-[420px] w-full object-contain"
               />
               {heatmapOn && (
@@ -214,9 +239,8 @@ export default function ResultPage() {
           </Button>
         </div>
         <div className="bg-slate-50 p-4 dark:bg-slate-950">
-          <img
-            src={item.previewDataUrl || ''}
-            alt=""
+          <PreviewImage
+            src={item.previewDataUrl}
             className="max-h-[70vh] w-full rounded-2xl object-contain"
           />
         </div>
