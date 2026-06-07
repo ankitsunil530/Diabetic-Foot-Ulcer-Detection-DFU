@@ -21,46 +21,74 @@ function NavItem({ to, children }) {
   )
 }
 
+// Validates the auth form fields and returns an object of per-field error
+// strings. An empty object means all fields are valid.
+function validateAuthForm(tab, form) {
+  const errs = {}
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  if (tab === 'signup' && !form.name.trim()) {
+    errs.name = 'Full name is required.'
+  }
+
+  if (!form.email.trim()) {
+    errs.email = 'Email is required.'
+  } else if (!emailRe.test(form.email)) {
+    errs.email = 'Enter a valid email address.'
+  }
+
+  if (!form.password) {
+    errs.password = 'Password is required.'
+  } else if (form.password.length < 6) {
+    errs.password = 'Password must be at least 6 characters.'
+  }
+
+  if (tab === 'signup') {
+    if (!form.confirm) {
+      errs.confirm = 'Please confirm your password.'
+    } else if (form.confirm !== form.password) {
+      errs.confirm = 'Passwords do not match.'
+    }
+  }
+
+  return errs
+}
+
 function AuthModal({ open, onClose }) {
   const [tab, setTab] = useState('login')
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
-  const [error, setError] = useState('')
+  // Per-field errors keyed by field name. Replaced from a single shared
+  // error string so each field highlights and describes its own issue.
+  const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
 
   if (!open) return null
 
   function handleChange(e) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
-    setError('')
+    // Clear only the error for the field the user is currently editing so
+    // other fields keep their inline messages until they are corrected.
+    setErrors((prev) => ({ ...prev, [e.target.name]: '' }))
     setSuccess('')
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    setError('')
     setSuccess('')
 
+    const errs = validateAuthForm(tab, form)
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+
+    setErrors({})
+
     if (tab === 'login') {
-      if (!form.email || !form.password) {
-        setError('Please fill in all fields.')
-        return
-      }
       // 🔌 TODO: connect to your backend /api/login
       setSuccess('Logged in successfully! (demo)')
       setTimeout(() => { onClose(); setSuccess('') }, 1200)
     } else {
-      if (!form.name || !form.email || !form.password || !form.confirm) {
-        setError('Please fill in all fields.')
-        return
-      }
-      if (form.password !== form.confirm) {
-        setError('Passwords do not match.')
-        return
-      }
-      if (form.password.length < 6) {
-        setError('Password must be at least 6 characters.')
-        return
-      }
       // 🔌 TODO: connect to your backend /api/signup
       setSuccess('Account created! (demo)')
       setTimeout(() => { setTab('login'); setSuccess('') }, 1200)
@@ -69,9 +97,17 @@ function AuthModal({ open, onClose }) {
 
   function switchTab(t) {
     setTab(t)
-    setError('')
+    setErrors({})
     setSuccess('')
     setForm({ name: '', email: '', password: '', confirm: '' })
+  }
+
+  // Returns input className with a red border when the field has an error,
+  // and the standard blue focus ring otherwise.
+  function inputClass(field) {
+    return errors[field]
+      ? 'w-full rounded-xl border border-red-400 bg-red-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-400/20 dark:border-red-500 dark:bg-red-950/20 dark:text-white'
+      : 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500'
   }
 
   return (
@@ -121,71 +157,109 @@ function AuthModal({ open, onClose }) {
         <form onSubmit={handleSubmit} className="grid gap-3 px-5 py-4">
           {tab === 'signup' && (
             <div className="grid gap-1">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <label
+                htmlFor="auth-name"
+                className="text-xs font-semibold text-slate-600 dark:text-slate-400"
+              >
                 Full name
               </label>
               <input
+                id="auth-name"
                 name="name"
                 type="text"
                 autoComplete="name"
                 placeholder="John Doe"
                 value={form.name}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'auth-name-error' : undefined}
+                className={inputClass('name')}
               />
+              {errors.name && (
+                <p id="auth-name-error" role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  {errors.name}
+                </p>
+              )}
             </div>
           )}
 
           <div className="grid gap-1">
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <label
+              htmlFor="auth-email"
+              className="text-xs font-semibold text-slate-600 dark:text-slate-400"
+            >
               Email
             </label>
             <input
+              id="auth-email"
               name="email"
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
               value={form.email}
               onChange={handleChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'auth-email-error' : undefined}
+              className={inputClass('email')}
             />
+            {errors.email && (
+              <p id="auth-email-error" role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+                {errors.email}
+              </p>
+            )}
           </div>
 
           <div className="grid gap-1">
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <label
+              htmlFor="auth-password"
+              className="text-xs font-semibold text-slate-600 dark:text-slate-400"
+            >
               Password
             </label>
             <input
+              id="auth-password"
               name="password"
               type="password"
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
               placeholder="••••••••"
               value={form.password}
               onChange={handleChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'auth-password-error' : undefined}
+              className={inputClass('password')}
             />
+            {errors.password && (
+              <p id="auth-password-error" role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+                {errors.password}
+              </p>
+            )}
           </div>
 
           {tab === 'signup' && (
             <div className="grid gap-1">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <label
+                htmlFor="auth-confirm"
+                className="text-xs font-semibold text-slate-600 dark:text-slate-400"
+              >
                 Confirm password
               </label>
               <input
+                id="auth-confirm"
                 name="confirm"
                 type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 value={form.confirm}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500"
+                aria-invalid={!!errors.confirm}
+                aria-describedby={errors.confirm ? 'auth-confirm-error' : undefined}
+                className={inputClass('confirm')}
               />
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-              {error}
+              {errors.confirm && (
+                <p id="auth-confirm-error" role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  {errors.confirm}
+                </p>
+              )}
             </div>
           )}
 
@@ -293,4 +367,3 @@ export default function Layout() {
     </div>
   )
 }
-
