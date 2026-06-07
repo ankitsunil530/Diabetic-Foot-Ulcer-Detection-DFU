@@ -1,17 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Moon, Sun, Github } from 'lucide-react'
+import { Menu, Moon, Sun, X } from 'lucide-react'
+import { useState } from 'react'
 import useDarkMode from '../hooks/useDarkMode.js'
 
-function NavItem({ to, children }) {
+function NavItem({ to, children, onClick, className = '' }) {
   return (
     <NavLink
       to={to}
+      onClick={onClick}
       className={({ isActive }) =>
         `rounded-xl px-3 py-2 text-sm font-semibold transition ${
           isActive
             ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
             : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900'
-        }`
+        } ${className}`
       }
       end
     >
@@ -22,6 +24,11 @@ function NavItem({ to, children }) {
 
 export default function Layout() {
   const { theme, toggle } = useDarkMode()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function closeMenu() {
+    setMenuOpen(false)
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -44,6 +51,7 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Desktop navigation */}
             <nav className="hidden items-center gap-1 md:flex">
               <NavItem to="/">Home</NavItem>
               <NavItem to="/analyze">Analyze</NavItem>
@@ -63,8 +71,40 @@ export default function Layout() {
                 <Moon className="h-4 w-4" />
               )}
             </button>
+
+            {/* Mobile menu toggle — only shown below md, where the nav is hidden */}
+            <button
+              onClick={() => setMenuOpen((open) => !open)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900 md:hidden"
+              aria-label="Toggle navigation menu"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+              type="button"
+            >
+              {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile navigation panel */}
+        {menuOpen && (
+          <nav
+            id="mobile-nav"
+            className="border-t border-slate-200 dark:border-slate-800 md:hidden"
+          >
+            <div className="mx-auto grid w-full max-w-6xl gap-1 px-4 py-3">
+              <NavItem to="/" className="w-full" onClick={closeMenu}>
+                Home
+              </NavItem>
+              <NavItem to="/analyze" className="w-full" onClick={closeMenu}>
+                Analyze
+              </NavItem>
+              <NavItem to="/history" className="w-full" onClick={closeMenu}>
+                History
+              </NavItem>
+            </div>
+          </nav>
+        )}
       </header>
 
       {/* Main Content */}
