@@ -84,7 +84,24 @@ export default function AnalyzePage() {
 
       const base = createHistoryItem({ file, prediction: enrichedPrediction })
       const item = await attachPreviewDataUrl(base, file)
-      saveHistoryItem(item)
+      const saved = saveHistoryItem(item)
+
+      if (!saved) {
+        // The prediction succeeded but persisting it failed (e.g. localStorage
+        // is full). Don't navigate to a result that was never saved — that
+        // lands the user on "Result not found". Surface the failure instead.
+        setStatus({
+          state: 'error',
+          message:
+            'Analysis finished, but saving it to local history failed (browser storage may be full). Clear history and try again to view the full result.',
+        })
+        toast.push({
+          tone: 'danger',
+          title: 'Could not save result',
+          message: 'Local storage is full. Clear history and try again.',
+        })
+        return
+      }
 
       toast.push({
         tone: 'success',

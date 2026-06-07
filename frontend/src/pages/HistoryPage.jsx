@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Filter, Trash2 } from 'lucide-react'
 import Badge from '../components/Badge.jsx'
@@ -16,6 +16,30 @@ const FILTERS = [
 
 function toneForLabel(label) {
   return String(label || '').toLowerCase() === 'ulcer' ? 'danger' : 'success'
+}
+
+/**
+ * History thumbnail that degrades gracefully when the stored preview is
+ * missing or fails to decode (onError), instead of rendering a broken image.
+ */
+function Thumb({ src }) {
+  const [errored, setErrored] = useState(false)
+  if (!src || errored) {
+    return (
+      <div className="grid h-24 place-items-center text-xs text-slate-400">
+        No image
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-24 w-full object-cover"
+      loading="lazy"
+      onError={() => setErrored(true)}
+    />
+  )
 }
 
 export default function HistoryPage() {
@@ -92,18 +116,7 @@ export default function HistoryPage() {
             >
               <div className="grid gap-3 md:grid-cols-[96px_1fr_auto] md:items-center">
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-                  {it.previewDataUrl ? (
-                    <img
-                      src={it.previewDataUrl}
-                      alt=""
-                      className="h-24 w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="grid h-24 place-items-center text-xs text-slate-400">
-                      No image
-                    </div>
-                  )}
+                  <Thumb src={it.previewDataUrl} />
                 </div>
 
                 <div className="min-w-0">
