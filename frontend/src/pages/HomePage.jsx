@@ -1,17 +1,25 @@
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   Brain,
+  CheckCircle2,
   ClipboardCheck,
+  Clock,
   Eye,
   Gauge,
   ShieldCheck,
   Upload,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import HealthStatus from '../components/HealthStatus.jsx'
+import { getSeverity } from '../lib/ai.js'
+import { formatDateTime } from '../lib/format.js'
+import { listHistory } from '../lib/history.js'
 
 function FeatureCard({ icon, title, desc }) {
   return (
@@ -56,7 +64,64 @@ function WorkflowStep({ icon, step, title, desc }) {
   )
 }
 
+// A single metric tile for the activity snapshot. `tone` selects the icon
+// colour so outcome counts read at a glance (red = ulcer, green = normal).
+function StatCard({ icon, label, value, tone = 'primary' }) {
+  const toneClass =
+    tone === 'danger'
+      ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+      : tone === 'success'
+        ? 'bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400'
+        : 'bg-blue-50 text-primary dark:bg-blue-950/40'
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-3">
+        <div className={`grid h-11 w-11 flex-none place-items-center rounded-2xl ${toneClass}`}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            {label}
+          </div>
+          <div className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            {value}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export default function HomePage() {
+  // Activity snapshot derived from locally stored history. listHistory() is
+  // safe (returns [] on any read/parse error) and sorted newest-first, so
+  // history[0] is the most recent result.
+  const stats = useMemo(() => {
+    const history = listHistory()
+    const total = history.length
+    const ulcer = history.filter(
+      (h) => String(h.label || '').toLowerCase() === 'ulcer'
+    ).length
+    const normal = history.filter(
+      (h) => String(h.label || '').toLowerCase() === 'normal'
+    ).length
+    const last = history[0] || null
+    const lastSeverity = last
+      ? last.severity ||
+        getSeverity({ label: last.label, confidence: last.confidence }).level
+      : null
+    return { total, ulcer, normal, last, lastSeverity }
+  }, [])
+
+  const lastLabel = String(stats.last?.label || '').toLowerCase()
+  const severityTone =
+    stats.lastSeverity === 'Severe'
+      ? 'danger'
+      : stats.lastSeverity === 'Moderate'
+        ? 'warning'
+        : 'success'
+
   return (
     <div className="grid gap-8">
       <section className="grid items-start gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-soft dark:border-slate-800 dark:bg-slate-950 dark:shadow-none md:grid-cols-[1.3fr_1fr]">
@@ -127,6 +192,91 @@ export default function HomePage() {
             </div>
           </Card>
         </div>
+      </section>
+
+      <section className="grid gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="grid gap-1">
+            <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+              Your activity
+            </div>
+            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              A quick snapshot of analyses saved in this browser.
+            </p>
+          </div>
+          {stats.total > 0 && (
+            <Link to="/history">
+              <Button variant="secondary" size="sm">
+                View history
+              </Button>
+            </Link>
+          )}
+        </div>
+
+        {stats.total === 0 ? (
+          <Card className="p-6">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 flex-none place-items-center rounded-2xl bg-blue-50 text-primary dark:bg-blue-950/40">
+                  <Activity className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    No analyses yet
+                  </div>
+                  <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+                    Run your first analysis to see results and metrics here.
+                  </p>
+                </div>
+              </div>
+              <Link to="/analyze">
+                <Button>
+                  Start Analysis{' '}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+              label="Total analyses"
+              value={stats.total}
+              tone="primary"
+            />
+            <StatCard
+              icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+              label="Ulcer findings"
+              value={stats.ulcer}
+              tone="danger"
+            />
+            <StatCard
+              icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
+              label="Normal results"
+              value={stats.normal}
+              tone="success"
+            />
+
+            <Card className="p-5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <Clock className="h-4 w-4" aria-hidden="true" />
+                Last result
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge tone={lastLabel === 'ulcer' ? 'danger' : 'success'}>
+                  {String(stats.last?.label || '—').toUpperCase()}
+                </Badge>
+                {stats.lastSeverity && (
+                  <Badge tone={severityTone}>{stats.lastSeverity}</Badge>
+                )}
+              </div>
+              <div className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400">
+                {formatDateTime(stats.last?.createdAt)}
+              </div>
+            </Card>
+          </div>
+        )}
       </section>
 
       <section className="grid gap-4">
@@ -204,4 +354,3 @@ export default function HomePage() {
     </div>
   )
 }
-
