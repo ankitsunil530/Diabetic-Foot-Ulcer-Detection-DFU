@@ -21,12 +21,13 @@ function toneForLabel(label) {
 /**
  * History thumbnail that degrades gracefully when the stored preview is
  * missing or fails to decode (onError), instead of rendering a broken image.
+ * Fills its container so the parent controls the (responsive) dimensions.
  */
 function Thumb({ src }) {
   const [errored, setErrored] = useState(false)
   if (!src || errored) {
     return (
-      <div className="grid h-24 place-items-center text-xs text-slate-400">
+      <div className="grid h-full min-h-[72px] w-full place-items-center text-xs text-slate-400">
         No image
       </div>
     )
@@ -35,7 +36,7 @@ function Thumb({ src }) {
     <img
       src={src}
       alt=""
-      className="h-24 w-full object-cover"
+      className="h-full w-full object-cover"
       loading="lazy"
       onError={() => setErrored(true)}
     />
@@ -114,8 +115,8 @@ export default function HistoryPage() {
               key={it.id}
               className="p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-none"
             >
-              <div className="grid gap-3 md:grid-cols-[96px_1fr_auto] md:items-center">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+              <div className="grid grid-cols-[72px_1fr] items-start gap-3 sm:grid-cols-[96px_1fr] md:grid-cols-[96px_1fr_auto] md:items-center">
+                <div className="aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 md:aspect-auto md:h-24">
                   <Thumb src={it.previewDataUrl} />
                 </div>
 
@@ -137,7 +138,7 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="col-span-2 flex items-center gap-2 md:col-span-1">
                   <Link to={`/results/${it.id}`}>
                     <Button variant="secondary">View</Button>
                   </Link>
@@ -150,4 +151,3 @@ export default function HistoryPage() {
     </div>
   )
 }
-
