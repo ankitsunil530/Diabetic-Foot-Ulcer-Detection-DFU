@@ -32,17 +32,10 @@ export default function AnalyzePage() {
   }, [previewUrl])
 
   function onFileSelected(next) {
-    if (!next) {
-      setFile(null)
-      return
-    }
-    const v = validateImageFile(next)
-    if (!v.ok) {
-      toast.push({ tone: 'warning', title: 'Invalid file', message: v.error })
-      setFile(null)
-      return
-    }
-    setFile(next)
+    // ImageDropzone validates the file and surfaces any validation error
+    // inline (with an accessible alert + recovery action), so whatever reaches
+    // here is either a valid file or null.
+    setFile(next || null)
   }
 
   async function onAnalyze() {
