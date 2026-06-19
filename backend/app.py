@@ -91,12 +91,18 @@ def predict():
         label = "Normal" if stage == "No Ulcer" else "Ulcer"
 
         # -------- Confidence low case --------
+        # The frontend always reads risk_level and advice from the response, so
+        # both must be present here too — otherwise the result card renders an
+        # undefined risk and no advice for any low-confidence prediction. The
+        # values reflect the uncertainty; the note flag is retained.
         if confidence < 0.6:
             return jsonify({
                 "ok": True,
                 "prediction": label,
                 "stage": stage,
                 "confidence": round(confidence, 4),
+                "risk_level": "Unknown",
+                "advice": "Low confidence result — please consult a medical professional",
                 "note": "Low confidence prediction"
             })
 
