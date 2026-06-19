@@ -25,6 +25,16 @@ Dense.__init__ = new_init
 app = Flask(__name__)
 CORS(app)
 
+# Reject uploads larger than 10 MB before the request body is read, so a very
+# large file can't exhaust server memory via file.read(). Flask raises 413
+# Request Entity Too Large automatically once this limit is exceeded.
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
+
+# Server-side allow-list of accepted image MIME types. The browser dropzone
+# already restricts to JPG/PNG, but any direct API client (curl, Postman)
+# bypasses that — so the same guard is enforced here.
+ALLOWED_TYPES = {"image/jpeg", "image/png"}
+
 
 # ------------------ Load Model ------------------
 MODEL_PATH = "final_model.keras"
@@ -77,8 +87,25 @@ def predict():
         if file.filename == "":
             return jsonify({"ok": False, "error": "Empty file"}), 400
 
+        # -------- Validate file type (server-side) --------
+        # A non-image upload is a client error (400), not a server error (500).
+        if file.content_type not in ALLOWED_TYPES:
+            return jsonify({
+                "ok": False,
+                "error": "Invalid file type. Only JPEG and PNG are accepted."
+            }), 400
+
         # -------- Read Image --------
-        img = Image.open(io.BytesIO(file.read())).convert("RGB")
+        # Pillow raises UnidentifiedImageError on a file it can't decode (e.g. a
+        # renamed non-image). Catch it here and return 400 so it doesn't fall
+        # through to the generic 500 handler below.
+        try:
+            img = Image.open(io.BytesIO(file.read())).convert("RGB")
+        except Exception:
+            return jsonify({
+                "ok": False,
+                "error": "Could not read image. Please upload a valid JPEG or PNG."
+            }), 400
 
         # -------- Preprocess --------
         input_img = preprocess_image(img)
