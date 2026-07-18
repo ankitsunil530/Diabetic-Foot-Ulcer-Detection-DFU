@@ -111,7 +111,18 @@ def predict():
         input_img = preprocess_image(img)
 
         # -------- Predict --------
-        pred = model.predict(input_img)
+        raw_pred = model.predict(input_img)
+        
+        # -------- Temperature Scaling Calibration --------
+        # Soften overconfident predictions using a temperature T > 1.0
+        T = 1.5
+        # Convert probabilities back to logits approximately to apply scaling
+        logits = np.log(np.clip(raw_pred, 1e-7, 1.0))
+        scaled_logits = logits / T
+        # Re-apply softmax to get calibrated probabilities
+        exp_scaled = np.exp(scaled_logits - np.max(scaled_logits, axis=1, keepdims=True))
+        pred = exp_scaled / np.sum(exp_scaled, axis=1, keepdims=True)
+
         confidence = float(np.max(pred))
         stage = get_stage(pred)
 
